@@ -195,7 +195,7 @@ def _isValid(card_nums, card_colors):
 @njit(cache=True)
 def _isSuite(list_nums):
     nums_sorted = np.sort(list_nums)
-    return (nums_sorted[0]+1 == nums_sorted[1] and nums_sorted[0]+2 == nums_sorted[2])
+    return (nums_sorted[0] + 2 == nums_sorted[1] + 1 == nums_sorted[2])
 
 @njit(cache=True)
 def _isBrelan(list_nums):
@@ -280,6 +280,11 @@ def _best_comp(unseencard, list_card, couleurs_possibles):
                 return (4, somme + val_max + 1)
             if val_min - 1 >= 1 and _carte_dispo_num_et_couleur(unseencard, val_min - 1, couleur0):
                 return (4, somme + val_min - 1)
+            
+        if couleur0 == couleur1 and abs(val0 - val1) == 2:  # <-- Écart de 2
+            middle_val = (val0 + val1) // 2
+            if _carte_dispo_num_et_couleur(unseencard, middle_val, couleur0):
+                return (4, val0 + val1 + middle_val)  # Suite couleur
         
         # Brelan
         if val0 == val1 and carte_dispo_num(unseencard, val1):
@@ -297,7 +302,11 @@ def _best_comp(unseencard, list_card, couleurs_possibles):
                 return (1, somme + val_max + 1)
             if val_min - 1 >= 1 and carte_dispo_num(unseencard, val_min - 1):
                 return (1, somme + val_min - 1)
-        
+        if abs(val0 - val1) == 2:  # <-- Écart de 2
+            middle_val = (val0 + val1) // 2
+            if carte_dispo_num(unseencard, middle_val):
+                return (1, val0 + val1 + middle_val)  # Suite couleur
+
         # Somme
         for i in range(9, 0, -1):
             if carte_dispo_num(unseencard, i):
@@ -420,7 +429,7 @@ def _best_comp(unseencard, list_card, couleurs_possibles):
                 max3 = c['num']
         if max1 > 0 and max2 > 0 and max3 > 0:
             return (0, max1 + max2 + max3)
-    
+        
     return (0, 0)  # Aucune combinaison trouvée
 
 

@@ -25,6 +25,7 @@ class Interface:
     # affiche tous les éléments graphique du jeu
     def draw_board(self, player, opponent, board):
         self.draw_background()
+        self.draw_help_button()
         self.affiche_pioche(board.index_pioche)
         self.draw_borne()
         self.surbrillance()
@@ -35,16 +36,33 @@ class Interface:
         self.draw_player_cards(player.main)
         pygame.display.flip()
 
+    def draw_help_button(self):
+        btn = pygame.Rect(WIDTH - 120, HEIGHT - 60, 100, 40)
+        color = (70, 70, 200) if not btn.collidepoint(pygame.mouse.get_pos()) else (100, 100, 230)
+        
+        pygame.draw.rect(self.screen, color, btn, border_radius=5)
+        font = pygame.font.Font(None, 28)
+        text = font.render("Aide", True, (255, 255, 255))
+        self.screen.blit(text, (btn.x + 25, btn.y + 10))
+    
+        return btn
 
     # affiche les cartes du joueurs
     def draw_player_cards(self, cards):
         for i, card in enumerate(cards):
-            if card['num'] != -1:  # Si l'emplacement n'est pas vide
+            if card['num'] != -1:
+                # Ajouter ombre portée
+                pygame.draw.rect(self.screen, (50, 50, 80), 
+                                (self.card_positions[i][0] + 3, 
+                                self.card_positions[i][1] + 5, 
+                                self.card_size[0], 
+                                self.card_size[1]), 
+                                border_radius=5)
+                
                 img_path = f"cartes/carte_{card['couleur']}/{card['num']}_{card['couleur']}.png"
                 img = pygame.image.load(img_path).convert_alpha()
                 img = pygame.transform.scale(img, self.card_size)
-                self.screen.blit(img, (self.card_positions[i][0], self.card_positions[i][1]))
-    
+                self.screen.blit(img, self.card_positions[i])
 
     # affiches les cartes de l'adversaire, caché bien évidemment
     def draw_opponent_cards(self, cards):
@@ -66,9 +84,10 @@ class Interface:
             self.screen.blit(img, (x, y))
 
 
-    # dessine l'arrière plan, ici on a choisi du rose clair
     def draw_background(self):
-        self.screen.fill((255, 182, 193))  # Rose clair
+        for y in range(HEIGHT):
+            color =(211, 211, 211)
+            pygame.draw.line(self.screen, color, (0, y), (WIDTH, y))
 
     # Permet le déplacement des cartes du joueur
     # joue la carte déplacé 
@@ -80,6 +99,20 @@ class Interface:
         color = ''
         borne_y = HEIGHT//2 - self.card_size[0]/2  # Position Y des bornes
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.draw_help_button().collidepoint(event.pos):
+                rules = [
+                    "Règles du jeu :",
+                    "- Placez des cartes sur les bornes (1-9)",
+                    "- 3 cartes par borne pour la revendiquer",
+                    "- 5 bornes ou 3 consécutives pour gagner!",
+                    "- Combinaisons :",
+                    "  Suite Couleur > Brelan > Couleur > Suite > Somme",
+                    "- Cliquez-glissez pour jouer vos cartes"
+                ]
+                self.show_text_popup('\n'.join(rules), (50, 100), (900, 300))
+                return False, -1, ''
+        
         if event.type == pygame.MOUSEBUTTONDOWN:
             # Vérifie si le clic est sur une carte du joueur
             for i, (x, y) in enumerate(self.card_positions):
@@ -214,7 +247,7 @@ class Interface:
         self.screen.blit(texte, texte_rect)
 
     def justif(self, num, val):
-        text = "La meilleur combinaison sur la borne " + str(num) +" était "
+        text = "La meilleur combinaison sur la borne " + str(num+1) +" était "
         if val[0] == 0:
             text += "une Horde Sauvage"
         elif val[0] == 1:
@@ -226,7 +259,7 @@ class Interface:
         elif val[0] == 4:
             text += "une Suite Couleur"
         
-        text += " de valeur  " + str(val[1]+1)
+        text += " de valeur  " + str(val[1])
 
         self.show_text_popup(text)
             
@@ -294,69 +327,4 @@ class Interface:
         return True
     
    
-    def afficher_chargement(self,duree_secondes, texte="Attente du tour adverse..."):
-        """
-        Affiche une barre de chargement qui se remplit progressivement
-        avec un texte centré pendant une durée déterminée.
-        
-        Args:
-            screen: Surface Pygame où dessiner
-            duree_secondes: Durée totale du chargement
-            texte: Message à afficher
-        """
-        # Paramètres visuels
-        largeur, hauteur = self.screen.get_size()
-        barre_largeur = largeur * 0.6  # 60% de la largeur de l'écran
-        barre_hauteur = 30
-        barre_x = (largeur - barre_largeur) // 2
-        barre_y = hauteur * 0.7  # 70% de la hauteur
-        
-        couleur_fond = (50, 50, 80)
-        couleur_barre = (100, 200, 100)
-        couleur_texte = (240, 240, 240)
-        
-        font = pygame.font.Font(None, 36)
-        
-        debut = time.time()
-        progression = 0.0
-        
-        while progression < 1.0:
-            # Calcul de la progression
-            temps_ecoule = time.time() - debut
-            progression = min(temps_ecoule / duree_secondes, 1.0)
-            
-            # Gestion des événements (pour ne pas bloquer)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return
-            
-            # Effacer l'écran (ou dessiner par-dessus l'état actuel)
-            # screen.fill((0, 0, 0))  # Décommenter pour fond noir
-            
-            # Dessiner la barre de fond
-            pygame.draw.rect(self.screen, couleur_fond, 
-                            (barre_x, barre_y, barre_largeur, barre_hauteur))
-            
-            # Dessiner la partie remplie
-            largeur_remplie = int(barre_largeur * progression)
-            pygame.draw.rect(self.screen, couleur_barre, 
-                            (barre_x, barre_y, largeur_remplie, barre_hauteur))
-            
-            # Contour de la barre
-            pygame.draw.rect(self.screen, (200, 200, 200), 
-                            (barre_x, barre_y, barre_largeur, barre_hauteur), 2)
-            
-            # Afficher le texte centré
-            texte_surface = font.render(texte, True, couleur_texte)
-            texte_rect = texte_surface.get_rect(center=(largeur//2, hauteur//2))
-            self.screen.blit(texte_surface, texte_rect)
-            
-            # Pourcentage (optionnel)
-            pourcentage = int(progression * 100)
-            pourcent_surface = font.render(f"{pourcentage}%", True, couleur_texte)
-            self.screen.blit(pourcent_surface, 
-                    (barre_x + barre_largeur + 10, barre_y))
-            
-            pygame.display.flip()
-            pygame.time.delay(30)  # Limite à ~30 FPS
+    

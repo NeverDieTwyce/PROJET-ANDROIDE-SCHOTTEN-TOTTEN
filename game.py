@@ -1,11 +1,12 @@
 import numpy as np
 from numba import njit, int32, types
-import random
 from numba.typed import List
 from board import _combinaison_numba, _best_comp, Board, COULEUR
 from player import Player
-import multiprocessing
-
+from interface import Interface
+import pygame
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 
 class Game:
     def __init__(self):
@@ -95,13 +96,13 @@ class Game:
                     
 
     # Simule N parties en parallèle pour un coup donné
-    def simulation(self, coup, simulations=1000, k=3):
+    def simulation(self, coup, simulations=1000, k=3, joueur='ai'):
         result = 0
         cpt = 0
         while cpt < simulations:
-            s = self.simulate_one(coup, k)
+            s = self.simulate_one(coup, k, joueur)
             if s != -1:
-                result += self.simulate_one(coup, k)
+                result += s
                 cpt += 1
         return result
 
@@ -122,46 +123,107 @@ class Game:
         return sim_game
  
     # Execute une simulation pour un coup donné jusqu'à la fin de la partie 
-    def simulate_one(self, coup, k):
+    def simulate_one(self, coup, k, joueur):
         sim_game = self.copy()
         borne_idx, carte_idx = coup
-        carte = sim_game.ai.main[carte_idx]
-        cpt = 0
-        
-        if not sim_game.board.ajouter_carte(sim_game.ai.num, borne_idx, (carte['num'], carte['couleur'])):
-            return 0
-            
-        sim_game.ai.retire_carte(carte)
-        new_card = sim_game.board.piocher_carte()
-        if new_card:
-            sim_game.ai.ajoute_carte(new_card)
-        
-        cpt = 0
+        if joueur == "ai":
+            carte = sim_game.ai.main[carte_idx]
+            cpt = 0
 
-        # Simuler la partie jusqu'à la fin
-        while not sim_game.game_over():
-            cpt += 1
-            if cpt > 200:
-                return -1
-            played2 = sim_game.strat_k(sim_game.player, k)
-            sim_game.board.checkwin(sim_game.player.num)
-            for (num_b, num_j) in sim_game.board.borne_won:
-                if num_j == 0:
-                    if num_b not in sim_game.player.won:
-                        sim_game.player.ajoute_flag(num_b)
-            if sim_game.game_over():
-                break
-            played1 = sim_game.strat_k(sim_game.ai, k)
             sim_game.board.checkwin(sim_game.ai.num)
             for (num_b, num_j) in sim_game.board.borne_won:
                 if num_j == 1:
                     if num_b not in sim_game.ai.won:
                         sim_game.ai.ajoute_flag(num_b)
-            """
-            print(f"Joueur {sim_game.player.won}, IA {sim_game.ai.won}")
-            print(f"Board {sim_game.board.borne_won}")
-            """
-        return 1 if sim_game.ai.a_gagner() else 0
+
+            if not sim_game.board.ajouter_carte(sim_game.ai.num, borne_idx, (carte['num'], carte['couleur'])):
+                return 0
+                
+            sim_game.ai.retire_carte(carte)
+            new_card = sim_game.board.piocher_carte()
+            if new_card:
+                sim_game.ai.ajoute_carte(new_card)
+            
+            cpt = 0
+
+            # Simuler la partie jusqu'à la fin
+            while not sim_game.game_over():
+                cpt += 1
+                if cpt > 35:
+                    print("simulation bloqué")
+                    pygame.init()
+                    WIDTH, HEIGHT = 1000, 700
+                    flags = pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.SRCALPHA
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT), flags, depth=32)
+                    ui = Interface(screen)
+                    ui.draw_board(sim_game.player, sim_game.ai, sim_game.board)
+                    return -1
+                
+                sim_game.board.checkwin(sim_game.player.num)
+                for (num_b, num_j) in sim_game.board.borne_won:
+                    if num_j == 0:
+                        if num_b not in sim_game.player.won:
+                            sim_game.player.ajoute_flag(num_b)
+                played2 = sim_game.strat_k(sim_game.player, k)
+
+                if sim_game.game_over():
+                    break
+
+                sim_game.board.checkwin(sim_game.ai.num)
+                for (num_b, num_j) in sim_game.board.borne_won:
+                    if num_j == 1:
+                        if num_b not in sim_game.ai.won:
+                            sim_game.ai.ajoute_flag(num_b)
+                played1 = sim_game.strat_k(sim_game.ai, k)
+    
+            return 1 if sim_game.ai.a_gagner() else 0
+        
+        elif joueur == "player":
+            carte = sim_game.player.main[carte_idx]
+            cpt = 0
+
+            sim_game.board.checkwin(sim_game.player.num)
+            for (num_b, num_j) in sim_game.board.borne_won:
+                if num_j == 0:
+                    if num_b not in sim_game.player.won:
+                        sim_game.player.ajoute_flag(num_b)
+
+            if not sim_game.board.ajouter_carte(sim_game.player.num, borne_idx, (carte['num'], carte['couleur'])):
+                return 0
+                
+            sim_game.player.retire_carte(carte)
+            new_card = sim_game.board.piocher_carte()
+            if new_card:
+                sim_game.player.ajoute_carte(new_card)
+            
+            cpt = 0
+
+            # Simuler la partie jusqu'à la fin
+            while not sim_game.game_over():
+                cpt += 1
+                if cpt > 35:
+                    print("simulation bloqué")
+                    return -1
+                
+                sim_game.board.checkwin(sim_game.ai.num)
+                for (num_b, num_j) in sim_game.board.borne_won:
+                    if num_j == 1:
+                        if num_b not in sim_game.ai.won:
+                            sim_game.ai.ajoute_flag(num_b)
+                played1 = sim_game.strat_k(sim_game.ai, k)
+
+                if sim_game.game_over():
+                    break
+                
+                sim_game.board.checkwin(sim_game.player.num)
+                for (num_b, num_j) in sim_game.board.borne_won:
+                    if num_j == 0:
+                        if num_b not in sim_game.player.won:
+                            sim_game.player.ajoute_flag(num_b)
+                played2 = sim_game.strat_k(sim_game.player, k)
+
+            return 1 if sim_game.player.a_gagner() else 0
+
        
 
 
