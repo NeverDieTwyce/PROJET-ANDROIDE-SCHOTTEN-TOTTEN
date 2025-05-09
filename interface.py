@@ -326,5 +326,63 @@ class Interface:
         
         return True
     
-   
-    
+
+    def show_endgame_popup(self, screen, player_won):
+        """Affiche un popup de fin de partie avec les boutons appropriés"""
+        # Sauvegarde de l'écran
+        screenshot = screen.copy()
+        
+        # Création du popup
+        popup_rect = pygame.Rect(WIDTH//2-200, HEIGHT//2-150, 400, 300)
+        
+        # Couleurs
+        BACKGROUND = (240, 240, 245)
+        BORDER = (50, 50, 80)
+        WIN_COLOR = (0, 200, 0)
+        LOSE_COLOR = (200, 0, 0)
+        
+        # Texte principal
+        main_text = "Bravo ! Vous avez gagné !" if player_won else "L'IA a gagné !"
+        main_color = WIN_COLOR if player_won else LOSE_COLOR
+        
+        # Boutons
+        btn_menu = pygame.Rect(WIDTH//2-150, HEIGHT//2+30, 300, 50)
+        btn_restart = pygame.Rect(WIDTH//2-150, HEIGHT//2+100, 300, 50)
+        
+        popup_active = True
+        while popup_active:
+            # Gestion des événements
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return "quit"
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if btn_menu.collidepoint(mouse_pos):
+                        return "menu"
+                    elif btn_restart.collidepoint(mouse_pos):
+                        return "restart"
+            
+            # Dessin
+            screen.blit(screenshot, (0, 0))  # Restaure le fond
+            pygame.draw.rect(screen, BACKGROUND, popup_rect)
+            pygame.draw.rect(screen, BORDER, popup_rect, 3)
+            
+            # Texte principal
+            font = pygame.font.Font(None, 36)
+            text_surf = font.render(main_text, True, main_color)
+            screen.blit(text_surf, (WIDTH//2 - text_surf.get_width()//2, HEIGHT//2-50))
+            
+            # Bouton Menu
+            pygame.draw.rect(screen, (70, 70, 200), btn_menu, border_radius=5)
+            menu_text = font.render("Retour au menu principal", True, (255, 255, 255))
+            screen.blit(menu_text, (WIDTH//2 - menu_text.get_width()//2, HEIGHT//2+45))
+            
+            # Bouton Recommencer
+            pygame.draw.rect(screen, (50, 200, 50), btn_restart, border_radius=5)
+            restart_text = font.render("Recommencer", True, (255, 255, 255))
+            screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, HEIGHT//2+115))
+            
+            pygame.display.flip()
+        
+        return "menu" 

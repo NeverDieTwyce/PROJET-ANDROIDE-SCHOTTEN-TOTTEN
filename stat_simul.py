@@ -221,8 +221,8 @@ def stat_game_2(sim1, nb_partie):
 
 
 if __name__ == '__main__':
-    print("50 vs 500")
-    victoires = stat_game_(50, 500, 1000) # Renvoie le nombre de victoire pour la simulation 50
-    #print("100 vs 0 k=3 pour simul et k=3 pour no simul")
+    print("50 vs 100")
+    victoires = stat_game_(50, 100, 1000) # Renvoie le nombre de victoire pour la simulation 50
+    #print("100 vs 0")
     #victoires = stat_game_2(100, 1000) # Renvoie le nombre de victoire pour la simulation 100
     print("Nombre de victoires de l'IA :", victoires)

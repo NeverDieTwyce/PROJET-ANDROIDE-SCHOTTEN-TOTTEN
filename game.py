@@ -9,10 +9,11 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 
 class Game:
-    def __init__(self):
+    def __init__(self, difficulty = "facile"):
         self.board = Board() 
         self.player = Player(0)  # Joueur humain
         self.ai= Player(1)  # IA
+        self.difficulty = difficulty 
     
     def copy(self):
         """Crée une copie complète du jeu"""
@@ -96,7 +97,7 @@ class Game:
                     
 
     # Simule N parties en parallèle pour un coup donné
-    def simulation(self, coup, simulations=1000, k=3, joueur='ai'):
+    def simulation(self, coup, simulations=500, k=3, joueur='ai'):
         result = 0
         cpt = 0
         while cpt < simulations:
